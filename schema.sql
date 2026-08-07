@@ -96,6 +96,34 @@ CREATE TABLE hospitals (
     CONSTRAINT chk_hospitals_name_not_empty CHECK (name <> '')
 );
 
+CREATE TABLE users (
+    user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hospital_id UUID NOT NULL,
+    user_role_id UUID NOT NULL,
+    username VARCHAR(128) NOT NULL,
+    email VARCHAR(320),
+    full_name VARCHAR(255),
+    department VARCHAR(128),
+    password_hash TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    failed_login_attempts INT NOT NULL DEFAULT 0 CHECK (failed_login_attempts >= 0),
+    locked_until TIMESTAMPTZ,
+    last_login_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ,
+    deleted_by UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_users_hospital FOREIGN KEY (hospital_id) REFERENCES hospitals (hospital_id) ON DELETE CASCADE,
+    CONSTRAINT fk_users_role FOREIGN KEY (user_role_id) REFERENCES user_roles (user_role_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_users_deleted_by FOREIGN KEY (deleted_by) REFERENCES users (user_id) ON DELETE SET NULL,
+    CONSTRAINT uq_users_hospital_username UNIQUE (hospital_id, username),
+    CONSTRAINT uq_users_email UNIQUE (email),
+    CONSTRAINT chk_users_username_not_empty CHECK (username <> '')
+);
+
+CREATE INDEX idx_users_hospital_id ON users (hospital_id);
+-- user indexes defined earlier
+
 CREATE TABLE hospital_settings (
     hospital_setting_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hospital_id UUID NOT NULL,
@@ -121,30 +149,6 @@ CREATE TABLE hospital_settings (
     CONSTRAINT chk_hospital_settings_value_not_empty CHECK (setting_value <> '')
 );
 
-CREATE TABLE users (
-    user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    hospital_id UUID NOT NULL,
-    user_role_id UUID NOT NULL,
-    username VARCHAR(128) NOT NULL,
-    email VARCHAR(320),
-    full_name VARCHAR(255),
-    department VARCHAR(128),
-    password_hash TEXT,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    failed_login_attempts INT NOT NULL DEFAULT 0 CHECK (failed_login_attempts >= 0),
-    locked_until TIMESTAMPTZ,
-    last_login_at TIMESTAMPTZ,
-    deleted_at TIMESTAMPTZ,
-    deleted_by UUID,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT fk_users_hospital FOREIGN KEY (hospital_id) REFERENCES hospitals (hospital_id) ON DELETE CASCADE,
-    CONSTRAINT fk_users_role FOREIGN KEY (user_role_id) REFERENCES user_roles (user_role_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_users_deleted_by FOREIGN KEY (deleted_by) REFERENCES users (user_id) ON DELETE SET NULL,
-    CONSTRAINT uq_users_hospital_username UNIQUE (hospital_id, username),
-    CONSTRAINT uq_users_email UNIQUE (email),
-    CONSTRAINT chk_users_username_not_empty CHECK (username <> '')
-);
 
 CREATE TABLE patients (
     patient_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -720,10 +724,7 @@ CREATE TABLE audit_log_events (
     CONSTRAINT chk_audit_log_events_action_not_empty CHECK (action <> '')
 );
 
-CREATE INDEX idx_users_hospital_id ON users (hospital_id);
-CREATE INDEX idx_users_user_role_id ON users (user_role_id);
-CREATE INDEX idx_users_email ON users (email);
-CREATE INDEX idx_users_deleted_at ON users (deleted_at);
+-- user indexes already declared earlier; removed duplicates
 
 CREATE INDEX idx_patients_hospital_id ON patients (hospital_id);
 CREATE INDEX idx_patients_full_name_trgm ON patients USING gin (lower(full_name) gin_trgm_ops);
