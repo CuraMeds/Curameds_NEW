@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ hospital_name }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {font-family: Arial; padding: 20px; background: #f0f4f8; max-width: 900px; margin: auto}
+        h2 {color: #0066cc; margin: 0}
+       .subtitle {color: #555; margin-bottom: 20px}
+        textarea, input, select {width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 10px}
+       .tab {background: white; padding: 15px; margin-top: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1)}
+       .red {color: #d32f2f; font-weight: bold}.yellow {color: #f57c00}.blue {color: #1976d2}.green-text {color: #28a745; font-size: 20px; font-weight:bold}
+        button {background: #0066cc; color: white; padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-right: 10px}
+       .green {background: #28a745}
+       .row {display: flex; gap: 10px}
+       .row div {flex: 1}
+    </style>
+</head>
+<body>
+    <h2>{{ hospital_name }}</h2>
+    <p class="subtitle">Powered by {{ total_codes }} ICD-10 codes + G-DRG Calculator</p>
+
+    <textarea id="note" rows="5" placeholder="Paste clinical note here... e.g: 28F, fever 3days, RDT positive. Rx: AL, Paracetamol"></textarea>
+
+    <div class="row">
+        <div>
+            <label><b>Days on Admission</b></label>
+            <input type="number" id="days" value="1" min="1">
+        </div>
+        <div>
+            <label><b>Add-ons</b></label>
+            <select id="addons" multiple size="4">
+                <option value="blood_transfusion">Blood Transfusion</option>
+                <option value="icu">ICU</option>
+                <option value="surgery">Surgery</option>
+                <option value="dialysis">Dialysis</option>
+            </select>
+        </div>
+    </div>
+
+    <button onclick="process()">Process Note</button>
+    <button onclick="exportExcel()" class="green">Export NHIA Excel</button>
+
+    <div id="results"></div>
+
+<script>
+async function process(){
+    let note = document.getElementById('note').value;
+    let days = document.getElementById('days').value;
+    let addons = Array.from(document.getElementById('addons').selectedOptions).map(o => o.value);
+    if(!note){alert("Please enter a note"); return;}
+
+    let res = await fetch('/process', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({note: note, days: parseInt(days), addons: addons})
+    });
+    let data = await res.json();
+    document.getElementById('results').innerHTML = `
+        <div class="tab"><b>ICD-10 Suggestions:</b><br>${data.icd_codes.map(c=>c.code+" - "+c.description).join("<br>")}</div>
+
+        <div class="tab"><b>G-DRG & Payment:</b><br>
+        <b>Code:</b> ${data.gdrg.gdrg_code} - ${data.gdrg.gdrg_name}<br>
+        <b>Calculated Amount:</b> <span class="green-text">₦${data.gdrg.calculated_amount.toLocaleString()}</span><br>
+        <pre style="font-size:12px; background:#f5f5f5; padding:10px">${data.gdrg.breakdown}</pre>
+        </div>
+
+        <div class="tab"><b>Drug Safety:</b><br>
+        Status: ${data.safety.status}<br>
+        On Formulary: ${data.safety.on_formulary.join(", ")}<br>
+        Warnings: ${data.safety.warnings.join("<br>") || "None"}
+        </div>
+
+        <div class="tab"><b>NHIA Audit:</b><br>${data.nhia_audit.flags.map(f=>`<span class="${f.level.toLowerCase()}">${f.level}: ${f.issue} - Fix: ${f.fix}</span>`).join("<br>") || "No Issues"}<br><b>Est. Payout: ${data.nhia_audit.estimated_payout}</b></div>
+        <div class="tab"><b>Discharge Summary:</b><br><pre>${data.discharge}</pre></div>
+    `;
+    document.getElementById('note').value = "";
+}
+
+async function exportExcel(){
+    let res = await fetch('/export');
+    if(res.headers.get('content-type').includes('application/json')){
+        let data = await res.json();
+        alert(data.error);
+        return;
+    }
+    let blob = await res.blob();
+    let url = window.URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = "NHIA_Claim.xlsx";
+    a.click();
+    alert("NHIA Excel Downloaded. Batch cleared.");
+}
+</script>
+</body>
+</html>
+
+

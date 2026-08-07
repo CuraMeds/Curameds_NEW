@@ -1,0 +1,12 @@
+[
+  {"code": "B50.0", "desc": "Plasmodium falciparum malaria with cerebral complications", "keyword": "cerebral malaria"},
+  {"code": "B50.9", "desc": "Plasmodium falciparum malaria, unspecified", "keyword": "malaria"},
+  {"code": "B50.0", "desc": "Plasmodium falciparum malaria with cerebral complications", "keyword": "rdt positive"},
+  {"code": "A01.0", "desc": "Typhoid fever", "keyword": "typhoid"},
+  {"code": "I10", "desc": "Essential hypertension", "keyword": "hypertension"},
+  {"code": "E11.9", "desc": "Type 2 diabetes mellitus without complications", "keyword": "diabetes"},
+  {"code": "J18.9", "desc": "Pneumonia, unspecified organism", "keyword": "pneumonia"},
+  {"code": "O80", "desc": "Single spontaneous delivery", "keyword": "normal delivery"},
+  {"code": "O82", "desc": "Delivery by caesarean section", "keyword": "c-section"},
+  {"code": "R51", "desc": "Headache", "keyword": "headache"}
+] 
